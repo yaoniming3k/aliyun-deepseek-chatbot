@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Aliyun DeepSeek AI ChatBot
- * Plugin URI: https://example.com/plugins/aliyun-deepseek-chatbot
+ * Plugin URI: https://github.com/yaoniming3k/aliyun-deepseek-chatbot
  * Description: Add an AI ChatBot powered by Aliyun DeepSeek service to your WordPress website using a shortcode.
  * Version: 1.0.0
  * Author: Chi Leung
