@@ -30,11 +30,21 @@ This plugin integrates the Aliyun DeepSeek AI service into your WordPress websit
 2. Activate the plugin through the 'Plugins' menu in WordPress
 3. Configure the plugin settings with your Aliyun DeepSeek API credentials
 
+OR
+
+1. Download zip file from Github.
+2. Install it as what you regular do to Wordpress plugin installation by wordpress dashboard.
+
 ## 安装
 
 1. 将 aliyun-deepseek-chatbot 文件夹上传至 /wp-content/plugins/ 目录
 2. 在 WordPress 的“插件”菜单中启用该插件
 3. 使用您的阿里云 DeepSeek API 凭证配置插件设置(智能体应用)
+
+**或**
+
+1. 从 Github 下载插件的 zip 压缩包  
+2. 通过 WordPress 仪表盘按照常规方式上传并安装该插件
 
 ## Configuration
 
