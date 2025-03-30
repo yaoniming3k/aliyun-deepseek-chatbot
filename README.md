@@ -58,9 +58,13 @@ This plugin requires the Aliyun DashScope API. You'll need:
 3. A DeepSeek App ID from your Aliyun dashboard
 
 The API request format follows the Aliyun DeepSeek format:
-curl --location 'https://dashscope.aliyuncs.com/api/v1/apps/{YOUR_APP_ID}/completion' 
+
+curl --location 'https://dashscope.aliyuncs.com/api/v1/apps/{YOUR_APP_ID}/completion'
+
 --header 'Authorization: Bearer {YOUR_API_KEY}' 
+
 --header 'Content-Type: application/json' 
+
 --data '{
    "input": {
       "prompt": "User message here"
@@ -74,16 +78,27 @@ curl --location 'https://dashscope.aliyuncs.com/api/v1/apps/{YOUR_APP_ID}/comple
 aliyun-deepseek-chatbot/
 
 ├── aliyun-deepseek-chatbot.php       # Main plugin file
+
 ├── includes/
+
 │   ├── class-admin.php               # Admin settings functionality
+
 │   ├── class-frontend.php            # Frontend display functionality
+
 │   └── class-api-handler.php         # API communication handling
+
 ├── assets/
+
 │   ├── css/
+
 │   │   ├── chatbot.css               # Frontend styles
+
 │   │   └── admin.css                 # Admin styles
+
 │   └── js/
+
 │       └── chatbot.js                # Frontend JavaScript
+
 └── languages/                        # Translation files
 
 ## Troubleshooting
