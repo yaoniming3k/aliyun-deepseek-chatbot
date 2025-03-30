@@ -72,17 +72,29 @@ curl --location 'https://dashscope.aliyuncs.com/api/v1/apps/{YOUR_APP_ID}/comple
 
 ## Directory Structure
 aliyun-deepseek-chatbot/
+
 ├── aliyun-deepseek-chatbot.php       # Main plugin file
+
 ├── includes/
+
 │   ├── class-admin.php               # Admin settings functionality
+
 │   ├── class-frontend.php            # Frontend display functionality
+
 │   └── class-api-handler.php         # API communication handling
+
 ├── assets/
+
 │   ├── css/
+
 │   │   ├── chatbot.css               # Frontend styles
+
 │   │   └── admin.css                 # Admin styles
+
 │   └── js/
+
 │       └── chatbot.js                # Frontend JavaScript
+
 └── languages/                        # Translation files
 
 ## Troubleshooting
