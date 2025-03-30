@@ -1,0 +1,222 @@
+.aliyun-chatbot-container {
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+    display: flex;
+    flex-direction: column;
+    height: 500px;
+}
+
+.aliyun-chatbot-header {
+    background-color: #0066cc;
+    color: white;
+    padding: 15px;
+    text-align: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.aliyun-chatbot-header h3 {
+    margin: 0;
+    font-size: 18px;
+    flex-grow: 1;
+}
+
+.aliyun-chatbot-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 15px;
+    background-color: #f9f9f9;
+    display: flex;
+    flex-direction: column;
+}
+
+.aliyun-chatbot-message {
+    margin-bottom: 15px;
+    max-width: 80%;
+    clear: both;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+.aliyun-chatbot-message.user {
+    align-self: flex-end;
+}
+
+.aliyun-chatbot-message.bot {
+    align-self: flex-start;
+}
+
+.aliyun-chatbot-message-content {
+    padding: 10px 15px;
+    border-radius: 18px;
+    display: inline-block;
+    word-break: break-word;
+}
+
+.aliyun-chatbot-message.user .aliyun-chatbot-message-content {
+    background-color: #0066cc;
+    color: white;
+    border-top-right-radius: 4px;
+}
+
+.aliyun-chatbot-message.bot .aliyun-chatbot-message-content {
+    background-color: #e9e9eb;
+    color: #333;
+    border-top-left-radius: 4px;
+}
+
+.aliyun-chatbot-thoughts {
+    font-size: 0.9em;
+    color: #666;
+    padding: 10px;
+    margin-bottom: 10px;
+    background-color: #f2f2f2;
+    border-left: 3px solid #ccc;
+    border-radius: 4px;
+    white-space: pre-wrap;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.aliyun-chatbot-input-container {
+    display: flex;
+    border-top: 1px solid #ddd;
+    padding: 10px;
+    background-color: white;
+}
+
+.aliyun-chatbot-input {
+    flex: 1;
+    border: none;
+    outline: none;
+    padding: 10px;
+    font-size: 14px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.aliyun-chatbot-input:disabled {
+    background-color: #f5f5f5;
+    color: #999;
+}
+
+.aliyun-chatbot-send {
+    background-color: #0066cc;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 10px 15px;
+    margin-left: 10px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s;
+}
+
+.aliyun-chatbot-send:hover {
+    background-color: #0055b3;
+}
+
+.aliyun-chatbot-send:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
+
+.aliyun-chatbot-send:focus {
+    outline: 2px solid #0088ff;
+    outline-offset: 2px;
+}
+
+.aliyun-chatbot-error {
+    color: #721c24;
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    padding: 10px 15px;
+    border-radius: 5px;
+    margin-bottom: 15px;
+}
+
+.aliyun-chatbot-clear-btn {
+    background-color: transparent;
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    border-radius: 5px;
+    padding: 3px 8px;
+    margin-left: 10px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background-color 0.2s;
+}
+
+.aliyun-chatbot-clear-btn:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Accessibility helper */
+.screen-reader-text {
+    border: 0;
+    clip: rect(1px, 1px, 1px, 1px);
+    clip-path: inset(50%);
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    padding: 0;
+    position: absolute;
+    width: 1px;
+    word-wrap: normal !important;
+}
+
+/* Animation for loading */
+.aliyun-chatbot-thinking {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.aliyun-chatbot-thinking .dot {
+    background-color: #999;
+    border-radius: 50%;
+    width: 8px;
+    height: 8px;
+    margin: 0 2px;
+    animation: pulse 1.4s infinite ease-in-out;
+}
+
+.aliyun-chatbot-thinking .dot:nth-child(1) {
+    animation-delay: -0.32s;
+}
+
+.aliyun-chatbot-thinking .dot:nth-child(2) {
+    animation-delay: -0.16s;
+}
+
+@keyframes pulse {
+    0%, 80%, 100% { transform: scale(0); }
+    40% { transform: scale(1.0); }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Media queries for responsiveness */
+@media (max-width: 480px) {
+    .aliyun-chatbot-container {
+        height: 400px;
+    }
+    
+    .aliyun-chatbot-input-container {
+        padding: 5px;
+    }
+    
+    .aliyun-chatbot-send {
+        padding: 8px 12px;
+        font-size: 13px;
+    }
+}
