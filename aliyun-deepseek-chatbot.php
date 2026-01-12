@@ -99,40 +99,21 @@ add_shortcode('aliyun_chatbot', 'aliyun_deepseek_chatbot_shortcode');
  * Activation hook - set up initial files and options
  */
 function aliyun_deepseek_chatbot_activate() {
-    // Set default API endpoint
-    if (!get_option('aliyun_chatbot_api_endpoint')) {
-        update_option('aliyun_chatbot_api_endpoint', 'https://dashscope.aliyuncs.com/api/v1/apps');
-    }
-    
     // Set initial version
     update_option('aliyun_chatbot_version', ALIYUN_CHATBOT_VERSION);
-    
-    // Ensure directories exist
-    wp_mkdir_p(ALIYUN_CHATBOT_PLUGIN_DIR . 'assets/css');
-    wp_mkdir_p(ALIYUN_CHATBOT_PLUGIN_DIR . 'assets/js');
-    wp_mkdir_p(ALIYUN_CHATBOT_PLUGIN_DIR . 'includes');
-    
-    // Create initial CSS and JS files if they don't exist
-    if (!file_exists(ALIYUN_CHATBOT_PLUGIN_DIR . 'assets/css/chatbot.css')) {
-        $css_content = file_get_contents(ALIYUN_CHATBOT_PLUGIN_DIR . 'assets/css/chatbot-default.css');
-        file_put_contents(ALIYUN_CHATBOT_PLUGIN_DIR . 'assets/css/chatbot.css', $css_content);
-    }
-    
-    if (!file_exists(ALIYUN_CHATBOT_PLUGIN_DIR . 'assets/css/admin.css')) {
-        $admin_css_content = file_get_contents(ALIYUN_CHATBOT_PLUGIN_DIR . 'assets/css/admin-default.css');
-        file_put_contents(ALIYUN_CHATBOT_PLUGIN_DIR . 'assets/css/admin.css', $admin_css_content);
-    }
-    
-    if (!file_exists(ALIYUN_CHATBOT_PLUGIN_DIR . 'assets/js/chatbot.js')) {
-        $js_content = file_get_contents(ALIYUN_CHATBOT_PLUGIN_DIR . 'assets/js/chatbot-default.js');
-        file_put_contents(ALIYUN_CHATBOT_PLUGIN_DIR . 'assets/js/chatbot.js', $js_content);
-    }
-    
-    // Set default options
-    add_option('aliyun_chatbot_api_endpoint', 'https://dashscope.aliyuncs.com/api/v1/apps');
+
+    // Set default options (using add_option so existing values won't be overwritten)
+    add_option('aliyun_chatbot_api_endpoint', 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions');
     add_option('aliyun_chatbot_enable_conversation', 1);
     add_option('aliyun_chatbot_show_thoughts', 0);
     add_option('aliyun_chatbot_history_length', 5);
+    add_option('aliyun_chatbot_enable_stream', 0);
+    add_option('aliyun_chatbot_width', 600);
+    add_option('aliyun_chatbot_height', 500);
+    add_option('aliyun_chatbot_model', 'deepseek-chat');
+    add_option('aliyun_chatbot_temperature', 1.0);
+    add_option('aliyun_chatbot_max_tokens', 4000);
+    add_option('aliyun_chatbot_system_message', '');
 }
 register_activation_hook(__FILE__, 'aliyun_deepseek_chatbot_activate');
 
@@ -143,32 +124,3 @@ function aliyun_deepseek_chatbot_deactivate() {
     // Clean up temporary data if needed
 }
 register_deactivation_hook(__FILE__, 'aliyun_deepseek_chatbot_deactivate');
-
-/**
- * Create uninstall.php file to handle proper uninstallation
- */
-function aliyun_deepseek_chatbot_create_uninstall_file() {
-    $uninstall_file = ALIYUN_CHATBOT_PLUGIN_DIR . 'uninstall.php';
-    
-    if (!file_exists($uninstall_file)) {
-        $uninstall_content = <<<PHP
-<?php
-// If uninstall not called from WordPress, exit
-if (!defined('WP_UNINSTALL_PLUGIN')) {
-    exit;
-}
-
-// Remove all plugin options
-delete_option('aliyun_chatbot_api_key');
-delete_option('aliyun_chatbot_api_endpoint');
-delete_option('aliyun_chatbot_app_id');
-delete_option('aliyun_chatbot_version');
-delete_option('aliyun_chatbot_enable_conversation');
-delete_option('aliyun_chatbot_show_thoughts');
-delete_option('aliyun_chatbot_history_length');
-PHP;
-        
-        file_put_contents($uninstall_file, $uninstall_content);
-    }
-}
-add_action('activated_plugin', 'aliyun_deepseek_chatbot_create_uninstall_file');

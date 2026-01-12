@@ -74,25 +74,38 @@ jQuery(document).ready(function($) {
         // Function to send a message to the API
         function sendMessage() {
             var message = inputField.val().trim();
-            
+
             if (message === '') {
                 return;
             }
-            
+
             // Add the user's message to the chat
             addMessage(formatMessage(message), true);
-            
+
             // Clear the input field
             inputField.val('');
-            
+
             // Disable input during processing
             inputField.prop('disabled', true);
             sendButton.prop('disabled', true);
-            
+
             // Show thinking indicator
             addThinkingIndicator();
-            
-            // Send the message to the server
+
+            // Check if streaming is enabled
+            var enableStream = aliyunChatbotData.enable_stream || false;
+
+            if (enableStream && typeof EventSource !== 'undefined') {
+                // Use SSE for streaming
+                sendStreamingMessage(message);
+            } else {
+                // Use traditional AJAX
+                sendTraditionalMessage(message);
+            }
+        }
+
+        // Traditional AJAX message sending
+        function sendTraditionalMessage(message) {
             $.ajax({
                 url: aliyunChatbotData.ajax_url,
                 type: 'POST',
@@ -105,23 +118,23 @@ jQuery(document).ready(function($) {
                 success: function(response) {
                     // Remove thinking indicator
                     removeThinkingIndicator();
-                    
+
                     // Re-enable input
                     inputField.prop('disabled', false);
                     sendButton.prop('disabled', false);
                     inputField.focus();
-                    
+
                     if (response.success) {
                         // Save session ID if provided
                         if (response.data.session_id) {
                             sessionId = response.data.session_id;
                         }
-                        
+
                         // Show thinking process if available
                         if (response.data.has_thoughts && response.data.thoughts) {
                             addThoughts(formatMessage(response.data.thoughts));
                         }
-                        
+
                         // Add the bot's response to the chat
                         addMessage(formatMessage(response.data.message), false);
                     } else {
@@ -133,16 +146,106 @@ jQuery(document).ready(function($) {
                 error: function(xhr, status, error) {
                     // Remove thinking indicator
                     removeThinkingIndicator();
-                    
+
                     // Re-enable input
                     inputField.prop('disabled', false);
                     sendButton.prop('disabled', false);
-                    
+
                     // Show an error message
                     addMessage(aliyunChatbotData.error_text, false);
                     console.error('AJAX error:', status, error);
                 }
             });
+        }
+
+        // SSE streaming message sending
+        function sendStreamingMessage(message) {
+            // Remove thinking indicator
+            removeThinkingIndicator();
+
+            // Create a placeholder message for streaming content
+            var streamMessageId = 'stream-message-' + Date.now();
+            var messageHtml = '<div class="aliyun-chatbot-message bot" id="' + streamMessageId + '" role="listitem">' +
+                '<div class="aliyun-chatbot-message-content"></div>' +
+                '</div>';
+            messagesContainer.append(messageHtml);
+
+            var streamMessage = container.find('#' + streamMessageId + ' .aliyun-chatbot-message-content');
+            var fullText = '';
+            var thoughtsShown = false;
+
+            // Build the URL with parameters
+            var url = aliyunChatbotData.ajax_url + '?' + $.param({
+                action: 'aliyun_chatbot_request',
+                nonce: aliyunChatbotData.nonce,
+                message: message,
+                session_id: sessionId
+            });
+
+            // Create EventSource
+            var eventSource = new EventSource(url);
+
+            eventSource.onmessage = function(event) {
+                if (event.data === '[DONE]') {
+                    eventSource.close();
+
+                    // Re-enable input
+                    inputField.prop('disabled', false);
+                    sendButton.prop('disabled', false);
+                    inputField.focus();
+                    return;
+                }
+
+                try {
+                    var data = JSON.parse(event.data);
+
+                    // Handle errors
+                    if (data.error) {
+                        eventSource.close();
+                        streamMessage.html(formatMessage(aliyunChatbotData.error_text));
+
+                        // Re-enable input
+                        inputField.prop('disabled', false);
+                        sendButton.prop('disabled', false);
+                        console.error('Streaming error:', data.error);
+                        return;
+                    }
+
+                    // Update session ID
+                    if (data.session_id) {
+                        sessionId = data.session_id;
+                    }
+
+                    // Show thoughts if available
+                    if (data.thoughts && !thoughtsShown) {
+                        addThoughts(formatMessage(data.thoughts));
+                        thoughtsShown = true;
+                    }
+
+                    // Append text incrementally
+                    if (data.text) {
+                        fullText = data.text;
+                        streamMessage.html(formatMessage(fullText));
+                        messagesContainer.scrollTop(messagesContainer[0].scrollHeight);
+                    }
+                } catch (e) {
+                    console.error('Error parsing SSE data:', e);
+                }
+            };
+
+            eventSource.onerror = function(error) {
+                eventSource.close();
+                console.error('SSE error:', error);
+
+                // If no content was received, show error message
+                if (!fullText) {
+                    streamMessage.html(formatMessage(aliyunChatbotData.error_text));
+                }
+
+                // Re-enable input
+                inputField.prop('disabled', false);
+                sendButton.prop('disabled', false);
+            };
         }
         
         // Function to clear the conversation

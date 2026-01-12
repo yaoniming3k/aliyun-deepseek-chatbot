@@ -1,6 +1,6 @@
 .aliyun-chatbot-container {
     width: 100%;
-    max-width: 600px;
+    max-width: var(--aliyun-chatbot-width, 600px);
     margin: 0 auto;
     border: 1px solid #ddd;
     border-radius: 8px;
@@ -9,7 +9,7 @@
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
     display: flex;
     flex-direction: column;
-    height: 500px;
+    height: var(--aliyun-chatbot-height, 500px);
 }
 
 .aliyun-chatbot-header {

@@ -34,7 +34,20 @@ class Aliyun_Chatbot_Frontend {
             array(),
             ALIYUN_CHATBOT_VERSION
         );
-        
+
+        // Add custom CSS for dynamic sizing
+        $width = get_option('aliyun_chatbot_width', 600);
+        $height = get_option('aliyun_chatbot_height', 500);
+
+        $custom_css = "
+            .aliyun-chatbot-container {
+                --aliyun-chatbot-width: {$width}px;
+                --aliyun-chatbot-height: {$height}px;
+            }
+        ";
+
+        wp_add_inline_style('aliyun-chatbot-style', $custom_css);
+
         wp_enqueue_script(
             'aliyun-chatbot-script',
             ALIYUN_CHATBOT_PLUGIN_URL . 'assets/js/chatbot.js',
@@ -42,7 +55,7 @@ class Aliyun_Chatbot_Frontend {
             ALIYUN_CHATBOT_VERSION,
             true
         );
-        
+
         wp_localize_script(
             'aliyun-chatbot-script',
             'aliyunChatbotData',
@@ -51,6 +64,7 @@ class Aliyun_Chatbot_Frontend {
                 'nonce' => wp_create_nonce('aliyun_chatbot_nonce'),
                 'loading_text' => __('Thinking...', 'aliyun-deepseek-chatbot'),
                 'error_text' => __('Sorry, something went wrong. Please try again.', 'aliyun-deepseek-chatbot'),
+                'enable_stream' => (bool) get_option('aliyun_chatbot_enable_stream', 0),
             )
         );
     }
@@ -75,12 +89,11 @@ class Aliyun_Chatbot_Frontend {
         
         // Get API settings
         $api_key = get_option('aliyun_chatbot_api_key', '');
-        $app_id = get_option('aliyun_chatbot_app_id', '');
-        
-        if (empty($api_key) || empty($app_id)) {
+
+        if (empty($api_key)) {
             if (current_user_can('manage_options')) {
                 return '<div class="aliyun-chatbot-error">' . 
-                    __('Please configure the Aliyun DeepSeek API key and App ID in the plugin settings.', 'aliyun-deepseek-chatbot') . 
+                    __('Please configure the Aliyun DeepSeek API key in the plugin settings.', 'aliyun-deepseek-chatbot') . 
                     '</div>';
             } else {
                 return '';
