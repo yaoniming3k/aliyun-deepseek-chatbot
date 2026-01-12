@@ -96,12 +96,20 @@ class Aliyun_Chatbot_Admin {
         if ('settings_page_aliyun-deepseek-chatbot' !== $hook) {
             return;
         }
-        
+
         wp_enqueue_style(
             'aliyun-chatbot-admin',
             ALIYUN_CHATBOT_PLUGIN_URL . 'assets/css/admin.css',
             array(),
             ALIYUN_CHATBOT_VERSION
+        );
+
+        wp_enqueue_script(
+            'aliyun-chatbot-admin',
+            ALIYUN_CHATBOT_PLUGIN_URL . 'assets/js/admin.js',
+            array('jquery'),
+            ALIYUN_CHATBOT_VERSION,
+            true
         );
     }
 
@@ -119,6 +127,17 @@ class Aliyun_Chatbot_Admin {
             'aliyun_deepseek_settings', 
             'aliyun_chatbot_api_endpoint', 
             array('sanitize_callback' => 'esc_url_raw')
+        );
+
+        register_setting(
+            'aliyun_deepseek_settings',
+            'aliyun_chatbot_api_mode',
+            array(
+                'sanitize_callback' => function($value) {
+                    $value = sanitize_text_field($value);
+                    return in_array($value, array('model', 'agent'), true) ? $value : 'model';
+                }
+            )
         );
 
         register_setting(
@@ -144,6 +163,12 @@ class Aliyun_Chatbot_Admin {
                     return implode(',', $hosts);
                 }
             )
+        );
+
+        register_setting(
+            'aliyun_deepseek_settings',
+            'aliyun_chatbot_workspace_id',
+            array('sanitize_callback' => 'sanitize_text_field')
         );
 
         register_setting(
@@ -253,73 +278,17 @@ class Aliyun_Chatbot_Admin {
             'aliyun_deepseek_api_section',
             __('API Settings', 'aliyun-deepseek-chatbot'),
             array($this, 'render_api_section'),
-            'aliyun_deepseek_settings'
-        );
-        
-        add_settings_field(
-            'aliyun_chatbot_api_key',
-            __('API Key', 'aliyun-deepseek-chatbot'),
-            array($this, 'render_api_key_field'),
-            'aliyun_deepseek_settings',
-            'aliyun_deepseek_api_section'
-        );
-        
-        add_settings_field(
-            'aliyun_chatbot_api_endpoint',
-            __('API Endpoint', 'aliyun-deepseek-chatbot'),
-            array($this, 'render_api_endpoint_field'),
-            'aliyun_deepseek_settings',
-            'aliyun_deepseek_api_section'
-        );
-        
-        add_settings_field(
-            'aliyun_chatbot_app_id',
-            __('App ID', 'aliyun-deepseek-chatbot'),
-            array($this, 'render_app_id_field'),
-            'aliyun_deepseek_settings',
-            'aliyun_deepseek_api_section'
-        );
-        
-        // Features Settings section
-        add_settings_section(
-            'aliyun_deepseek_features_section',
-            __('Features Settings', 'aliyun-deepseek-chatbot'),
-            array($this, 'render_features_section'),
-            'aliyun_deepseek_settings'
-        );
-        
-        add_settings_field(
-            'aliyun_chatbot_enable_conversation',
-            __('Multi-turn Conversation', 'aliyun-deepseek-chatbot'),
-            array($this, 'render_enable_conversation_field'),
-            'aliyun_deepseek_settings',
-            'aliyun_deepseek_features_section'
-        );
-        
-        add_settings_field(
-            'aliyun_chatbot_show_thoughts',
-            __('Show Thinking Process', 'aliyun-deepseek-chatbot'),
-            array($this, 'render_show_thoughts_field'),
-            'aliyun_deepseek_settings',
-            'aliyun_deepseek_features_section'
-        );
-        
-        add_settings_field(
-            'aliyun_chatbot_history_length',
-            __('Conversation History Length', 'aliyun-deepseek-chatbot'),
-            array($this, 'render_history_length_field'),
-            'aliyun_deepseek_settings',
-            'aliyun_deepseek_features_section'
-        );
-        
-        // API Settings section
-        add_settings_section(
-            'aliyun_deepseek_api_section',
-            __('API Settings', 'aliyun-deepseek-chatbot'),
-            array($this, 'render_api_section'),
             'aliyun-deepseek-chatbot'
         );
         
+        add_settings_field(
+            'aliyun_chatbot_api_mode',
+            __('API Mode', 'aliyun-deepseek-chatbot'),
+            array($this, 'render_api_mode_field'),
+            'aliyun-deepseek-chatbot',
+            'aliyun_deepseek_api_section'
+        );
+
         add_settings_field(
             'aliyun_chatbot_api_key',
             __('API Key', 'aliyun-deepseek-chatbot'),
@@ -348,6 +317,14 @@ class Aliyun_Chatbot_Admin {
             'aliyun_chatbot_app_id',
             __('App ID', 'aliyun-deepseek-chatbot'),
             array($this, 'render_app_id_field'),
+            'aliyun-deepseek-chatbot',
+            'aliyun_deepseek_api_section'
+        );
+
+        add_settings_field(
+            'aliyun_chatbot_workspace_id',
+            __('Workspace ID', 'aliyun-deepseek-chatbot'),
+            array($this, 'render_workspace_id_field'),
             'aliyun-deepseek-chatbot',
             'aliyun_deepseek_api_section'
         );
@@ -461,8 +438,16 @@ class Aliyun_Chatbot_Admin {
      * Render API section description
      */
     public function render_api_section() {
-        echo '<p>' . __('Enter your Aliyun DeepSeek API credentials below.', 'aliyun-deepseek-chatbot') . '</p>';
-        echo '<p>' . __('Note: This plugin uses the OpenAI-compatible endpoint.', 'aliyun-deepseek-chatbot') . '</p>';
+        ?>
+        <p><?php _e('Configure your Aliyun Bailian API settings below.', 'aliyun-deepseek-chatbot'); ?></p>
+        <div class="notice notice-warning inline" style="margin: 10px 0; padding: 10px;">
+            <p><strong><?php _e('Choose Your API Mode:', 'aliyun-deepseek-chatbot'); ?></strong></p>
+            <ul style="margin-left: 20px;">
+                <li><strong><?php _e('Model API', 'aliyun-deepseek-chatbot'); ?></strong>: <?php _e('Direct model calling (Qwen, DeepSeek). Simple Q&A scenarios. Full control over parameters.', 'aliyun-deepseek-chatbot'); ?></li>
+                <li><strong><?php _e('Application API', 'aliyun-deepseek-chatbot'); ?></strong>: <?php _e('Call applications created in Bailian Console. Supports RAG, tools, and workflows.', 'aliyun-deepseek-chatbot'); ?></li>
+            </ul>
+        </div>
+        <?php
     }
 
     /**
@@ -477,6 +462,20 @@ class Aliyun_Chatbot_Admin {
      */
     public function render_appearance_section() {
         echo '<p>' . __('Customize the appearance of the chatbot.', 'aliyun-deepseek-chatbot') . '</p>';
+    }
+
+    /**
+     * Render API mode field
+     */
+    public function render_api_mode_field() {
+        $api_mode = get_option('aliyun_chatbot_api_mode', 'model');
+        ?>
+        <select id="aliyun_chatbot_api_mode" name="aliyun_chatbot_api_mode" class="regular-text">
+            <option value="model" <?php selected($api_mode, 'model'); ?>><?php _e('Model API (OpenAI-compatible)', 'aliyun-deepseek-chatbot'); ?></option>
+            <option value="agent" <?php selected($api_mode, 'agent'); ?>><?php _e('Agent API (App)', 'aliyun-deepseek-chatbot'); ?></option>
+        </select>
+        <p class="description"><?php _e('Select which DashScope API mode to use.', 'aliyun-deepseek-chatbot'); ?></p>
+        <?php
     }
 
     /**
@@ -497,7 +496,7 @@ class Aliyun_Chatbot_Admin {
         $api_endpoint = get_option('aliyun_chatbot_api_endpoint', 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions');
         ?>
         <input type="text" id="aliyun_chatbot_api_endpoint" name="aliyun_chatbot_api_endpoint" value="<?php echo esc_attr($api_endpoint); ?>" class="regular-text">
-        <p class="description"><?php _e('The Aliyun DeepSeek API endpoint (default: https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions)', 'aliyun-deepseek-chatbot'); ?></p>
+        <p class="description"><?php _e('Model API endpoint (default: https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions). Agent API uses /api/v1/apps/APP_ID/completion.', 'aliyun-deepseek-chatbot'); ?></p>
         <?php
     }
 
@@ -505,10 +504,10 @@ class Aliyun_Chatbot_Admin {
      * Render allowed API hosts field
      */
     public function render_allowed_api_hosts_field() {
-        $allowed_hosts = get_option('aliyun_chatbot_allowed_api_hosts', 'dashscope.aliyuncs.com');
+        $allowed_hosts = get_option('aliyun_chatbot_allowed_api_hosts', 'dashscope.aliyuncs.com, dashscope-intl.aliyuncs.com');
         ?>
         <input type="text" id="aliyun_chatbot_allowed_api_hosts" name="aliyun_chatbot_allowed_api_hosts" value="<?php echo esc_attr($allowed_hosts); ?>" class="regular-text">
-        <p class="description"><?php _e('Comma-separated list of allowed API hosts. Default: dashscope.aliyuncs.com', 'aliyun-deepseek-chatbot'); ?></p>
+        <p class="description"><?php _e('Comma-separated list of allowed API hosts. Default: dashscope.aliyuncs.com, dashscope-intl.aliyuncs.com', 'aliyun-deepseek-chatbot'); ?></p>
         <?php
     }
 
@@ -519,13 +518,24 @@ class Aliyun_Chatbot_Admin {
         $app_id = get_option('aliyun_chatbot_app_id', '');
         ?>
         <input type="text" id="aliyun_chatbot_app_id" name="aliyun_chatbot_app_id" value="<?php echo esc_attr($app_id); ?>" class="regular-text">
-        <p class="description"><?php _e('Optional App ID (not required for the OpenAI-compatible endpoint).', 'aliyun-deepseek-chatbot'); ?></p>
+        <p class="description"><?php _e('Required for Agent API mode. Not required for the OpenAI-compatible model API.', 'aliyun-deepseek-chatbot'); ?></p>
         <?php
         
         // Add direct output of current value for debugging
         if (WP_DEBUG) {
             echo '<p><strong>Debug</strong>: Current stored App ID value: "' . esc_html($app_id) . '"</p>';
         }
+    }
+
+    /**
+     * Render workspace ID field
+     */
+    public function render_workspace_id_field() {
+        $workspace_id = get_option('aliyun_chatbot_workspace_id', '');
+        ?>
+        <input type="text" id="aliyun_chatbot_workspace_id" name="aliyun_chatbot_workspace_id" value="<?php echo esc_attr($workspace_id); ?>" class="regular-text">
+        <p class="description"><?php _e('Optional Workspace ID for Agent API calls.', 'aliyun-deepseek-chatbot'); ?></p>
+        <?php
     }
 
     /**
@@ -620,13 +630,137 @@ class Aliyun_Chatbot_Admin {
      * Render model field
      */
     public function render_model_field() {
-        $model = get_option('aliyun_chatbot_model', 'deepseek-chat');
+        $model = get_option('aliyun_chatbot_model', 'qwen-plus');
+        $model_groups = array(
+            __('Qwen (General)', 'aliyun-deepseek-chatbot') => array(
+                'qwen-plus',
+                'qwen-max',
+                'qwen-turbo',
+                'qwen-flash',
+                'qwen-long',
+            ),
+            __('Qwen (Coder)', 'aliyun-deepseek-chatbot') => array(
+                'qwen-coder-plus',
+                'qwen-coder-turbo',
+                'qwen3-coder-plus',
+                'qwen3-coder-flash',
+            ),
+            __('Qwen (Other Text)', 'aliyun-deepseek-chatbot') => array(
+                'qwen-math-plus',
+                'qwen-math-turbo',
+                'qwen-mt-plus',
+                'qwen-mt-turbo',
+                'qwen-mt-flash',
+                'qwen-mt-lite',
+                'qwen-doc-turbo',
+                'qwen-deep-research',
+                'qwen-plus-character',
+                'qwen-plus-character-ja',
+            ),
+            __('DeepSeek', 'aliyun-deepseek-chatbot') => array(
+                'deepseek-chat',
+                'deepseek-v3',
+                'deepseek-v3.1',
+                'deepseek-v3.2',
+                'deepseek-r1',
+                'deepseek-r1-0528',
+            ),
+            __('DeepSeek (Distill)', 'aliyun-deepseek-chatbot') => array(
+                'deepseek-r1-distill-qwen-1.5b',
+                'deepseek-r1-distill-qwen-7b',
+                'deepseek-r1-distill-qwen-14b',
+                'deepseek-r1-distill-qwen-32b',
+                'deepseek-r1-distill-llama-8b',
+                'deepseek-r1-distill-llama-70b',
+            ),
+            __('Kimi', 'aliyun-deepseek-chatbot') => array(
+                'kimi-k2',
+                'kimi-k2-thinking',
+                'kimi-k2-instruct',
+            ),
+            __('GLM', 'aliyun-deepseek-chatbot') => array(
+                'glm-4.7',
+                'glm-4.6',
+                'glm-4.5',
+                'glm-4.5-air',
+            ),
+        );
+        $model_suggestions = array(
+            'qwen-max',
+            'qwen-plus',
+            'qwen-flash',
+            'qwen-turbo',
+            'qwen-long',
+            'qwen-coder-plus',
+            'qwen-coder-turbo',
+            'qwen3-coder-plus',
+            'qwen3-coder-flash',
+            'qwen-math-plus',
+            'qwen-math-turbo',
+            'qwen-mt-plus',
+            'qwen-mt-turbo',
+            'qwen-mt-flash',
+            'qwen-mt-lite',
+            'qwen-doc-turbo',
+            'qwen-deep-research',
+            'qwen-plus-character',
+            'qwen-plus-character-ja',
+            'deepseek-chat',
+            'deepseek-v3',
+            'deepseek-v3.1',
+            'deepseek-v3.2',
+            'deepseek-r1',
+            'deepseek-r1-0528',
+            'deepseek-r1-distill-qwen-1.5b',
+            'deepseek-r1-distill-qwen-7b',
+            'deepseek-r1-distill-qwen-14b',
+            'deepseek-r1-distill-qwen-32b',
+            'deepseek-r1-distill-llama-8b',
+            'deepseek-r1-distill-llama-70b',
+            'kimi-k2',
+            'kimi-k2-thinking',
+            'kimi-k2-instruct',
+            'glm-4.7',
+            'glm-4.6',
+            'glm-4.5',
+            'glm-4.5-air'
+        );
         ?>
-        <select id="aliyun_chatbot_model" name="aliyun_chatbot_model" class="regular-text">
-            <option value="deepseek-chat" <?php selected($model, 'deepseek-chat'); ?>>DeepSeek Chat</option>
-            <option value="deepseek-reasoner" <?php selected($model, 'deepseek-reasoner'); ?>>DeepSeek Reasoner (R1)</option>
+        <select id="aliyun_chatbot_model_select" class="regular-text">
+            <option value=""><?php _e('Quick pick (grouped)', 'aliyun-deepseek-chatbot'); ?></option>
+            <?php foreach ($model_groups as $label => $values): ?>
+                <optgroup label="<?php echo esc_attr($label); ?>">
+                    <?php foreach ($values as $value): ?>
+                        <option value="<?php echo esc_attr($value); ?>" <?php selected($model, $value); ?>>
+                            <?php echo esc_html($value); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </optgroup>
+            <?php endforeach; ?>
         </select>
-        <p class="description"><?php _e('Select the DeepSeek model to use. DeepSeek Reasoner provides advanced reasoning capabilities.', 'aliyun-deepseek-chatbot'); ?></p>
+        <p class="description">
+            <?php _e('Select a common model to fill the Model ID below.', 'aliyun-deepseek-chatbot'); ?>
+        </p>
+        <input
+            type="text"
+            id="aliyun_chatbot_model"
+            name="aliyun_chatbot_model"
+            value="<?php echo esc_attr($model); ?>"
+            class="regular-text"
+            list="aliyun-chatbot-model-list"
+        >
+        <datalist id="aliyun-chatbot-model-list">
+            <?php foreach ($model_suggestions as $suggestion): ?>
+                <option value="<?php echo esc_attr($suggestion); ?>"></option>
+            <?php endforeach; ?>
+        </datalist>
+        <p class="description">
+            <?php _e('Enter a text/dialog model ID for Model API mode (you can also pick from the suggestions). Application API mode uses the model configured in your app.', 'aliyun-deepseek-chatbot'); ?>
+            <br>
+            <a href="https://help.aliyun.com/zh/model-studio/models" target="_blank" rel="noopener noreferrer">
+                -> <?php _e('View model comparison and pricing', 'aliyun-deepseek-chatbot'); ?>
+            </a>
+        </p>
         <?php
     }
 
@@ -637,7 +771,7 @@ class Aliyun_Chatbot_Admin {
         $temperature = get_option('aliyun_chatbot_temperature', 1.0);
         ?>
         <input type="number" id="aliyun_chatbot_temperature" name="aliyun_chatbot_temperature" value="<?php echo esc_attr($temperature); ?>" class="small-text" min="0" max="2" step="0.1">
-        <p class="description"><?php _e('Controls randomness in responses (0.0-2.0). Lower values make output more focused and deterministic. Default: 1.0', 'aliyun-deepseek-chatbot'); ?></p>
+        <p class="description"><?php _e('Controls randomness in responses (0.0-2.0). Model API mode only. Default: 1.0', 'aliyun-deepseek-chatbot'); ?></p>
         <?php
     }
 
@@ -648,7 +782,7 @@ class Aliyun_Chatbot_Admin {
         $max_tokens = get_option('aliyun_chatbot_max_tokens', 4000);
         ?>
         <input type="number" id="aliyun_chatbot_max_tokens" name="aliyun_chatbot_max_tokens" value="<?php echo esc_attr($max_tokens); ?>" class="small-text" min="100" max="8000" step="100">
-        <p class="description"><?php _e('Maximum number of tokens to generate (100-8000). Default: 4000', 'aliyun-deepseek-chatbot'); ?></p>
+        <p class="description"><?php _e('Maximum number of tokens to generate (100-8000). Model API mode only. Default: 4000', 'aliyun-deepseek-chatbot'); ?></p>
         <?php
     }
 
@@ -659,7 +793,7 @@ class Aliyun_Chatbot_Admin {
         $system_message = get_option('aliyun_chatbot_system_message', '');
         ?>
         <textarea id="aliyun_chatbot_system_message" name="aliyun_chatbot_system_message" rows="4" class="large-text"><?php echo esc_textarea($system_message); ?></textarea>
-        <p class="description"><?php _e('Optional system message to guide the AI\'s behavior. For example: "You are a helpful assistant for a WordPress website."', 'aliyun-deepseek-chatbot'); ?></p>
+        <p class="description"><?php _e('Optional system message to guide the AI\'s behavior. Model API mode only.', 'aliyun-deepseek-chatbot'); ?></p>
         <?php
     }
 
@@ -745,20 +879,25 @@ class Aliyun_Chatbot_Admin {
             
             <div class="aliyun-chatbot-config-info">
                 <h2><?php _e('API Configuration', 'aliyun-deepseek-chatbot'); ?></h2>
-                <p><?php _e('This plugin uses the OpenAI-compatible API endpoint from Aliyun DeepSeek.', 'aliyun-deepseek-chatbot'); ?></p>
+                <p><?php _e('This plugin supports both the OpenAI-compatible model API and the Agent (App) API.', 'aliyun-deepseek-chatbot'); ?></p>
 
                 <h3><?php _e('Required Settings:', 'aliyun-deepseek-chatbot'); ?></h3>
                 <ul>
                     <li><strong><?php _e('API Key:', 'aliyun-deepseek-chatbot'); ?></strong> <?php _e('Your Aliyun DashScope API key', 'aliyun-deepseek-chatbot'); ?></li>
-                    <li><strong><?php _e('Model:', 'aliyun-deepseek-chatbot'); ?></strong> <?php _e('Choose between DeepSeek Chat or DeepSeek Reasoner (R1)', 'aliyun-deepseek-chatbot'); ?></li>
+                    <li><strong><?php _e('API Mode:', 'aliyun-deepseek-chatbot'); ?></strong> <?php _e('Model API or Agent API', 'aliyun-deepseek-chatbot'); ?></li>
+                    <li><strong><?php _e('App ID:', 'aliyun-deepseek-chatbot'); ?></strong> <?php _e('Required for Agent API mode', 'aliyun-deepseek-chatbot'); ?></li>
                 </ul>
 
                 <h3><?php _e('API Endpoint Information:', 'aliyun-deepseek-chatbot'); ?></h3>
                 <p>
-                    <strong><?php _e('Endpoint:', 'aliyun-deepseek-chatbot'); ?></strong>
+                    <strong><?php _e('Model Endpoint:', 'aliyun-deepseek-chatbot'); ?></strong>
                     <code>https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions</code>
                 </p>
-                <p><?php _e('This plugin automatically uses the OpenAI-compatible endpoint for better compatibility and features.', 'aliyun-deepseek-chatbot'); ?></p>
+                <p>
+                    <strong><?php _e('Agent Endpoint:', 'aliyun-deepseek-chatbot'); ?></strong>
+                    <code>https://dashscope.aliyuncs.com/api/v1/apps/APP_ID/completion</code>
+                </p>
+                <p><?php _e('The endpoint is selected based on the API Mode setting.', 'aliyun-deepseek-chatbot'); ?></p>
 
                 <h3><?php _e('Example API Request:', 'aliyun-deepseek-chatbot'); ?></h3>
                 <pre style="background: #f5f5f5; padding: 15px; border-radius: 4px; overflow-x: auto;">

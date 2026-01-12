@@ -9,6 +9,7 @@ jQuery(document).ready(function($) {
         
         // Session ID to maintain conversation context
         var sessionId = '';
+        var showThoughts = !!aliyunChatbotData.show_thoughts;
         
         // Function to add a new message to the chat
         function addMessage(content, isUser) {
@@ -135,7 +136,7 @@ jQuery(document).ready(function($) {
                         }
 
                         // Show thinking process if available
-                        if (response.data.has_thoughts && response.data.thoughts) {
+                        if (showThoughts && response.data.has_thoughts && response.data.thoughts) {
                             addThoughts(formatMessage(response.data.thoughts));
                         }
 
@@ -243,7 +244,7 @@ jQuery(document).ready(function($) {
                                 sessionId = data.session_id;
                             }
 
-                            if (data.thoughts && !thoughtsShown) {
+                            if (showThoughts && data.thoughts && !thoughtsShown) {
                                 addThoughts(formatMessage(data.thoughts));
                                 thoughtsShown = true;
                                 hasStreamData = true;

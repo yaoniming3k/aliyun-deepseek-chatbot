@@ -6,6 +6,7 @@ if (!defined('WP_UNINSTALL_PLUGIN')) {
 
 $options = array(
     'aliyun_chatbot_api_key',
+    'aliyun_chatbot_api_mode',
     'aliyun_chatbot_api_endpoint',
     'aliyun_chatbot_allowed_api_hosts',
     'aliyun_chatbot_app_id',
@@ -15,6 +16,7 @@ $options = array(
     'aliyun_chatbot_history_length',
     'aliyun_chatbot_enable_stream',
     'aliyun_chatbot_max_message_length',
+    'aliyun_chatbot_workspace_id',
     'aliyun_chatbot_width',
     'aliyun_chatbot_height',
     'aliyun_chatbot_model',

@@ -65,6 +65,7 @@ class Aliyun_Chatbot_Frontend {
                 'loading_text' => __('Thinking...', 'aliyun-deepseek-chatbot'),
                 'error_text' => __('Sorry, something went wrong. Please try again.', 'aliyun-deepseek-chatbot'),
                 'enable_stream' => (bool) get_option('aliyun_chatbot_enable_stream', 0),
+                'show_thoughts' => (bool) get_option('aliyun_chatbot_show_thoughts', 0),
             )
         );
     }
@@ -89,11 +90,18 @@ class Aliyun_Chatbot_Frontend {
         
         // Get API settings
         $api_key = get_option('aliyun_chatbot_api_key', '');
+        $app_id = get_option('aliyun_chatbot_app_id', '');
+        $api_mode = get_option('aliyun_chatbot_api_mode', 'model');
+        $requires_app_id = ($api_mode === 'agent');
 
-        if (empty($api_key)) {
+        if (empty($api_key) || ($requires_app_id && empty($app_id))) {
             if (current_user_can('manage_options')) {
+                $message = __('Please configure the Aliyun DeepSeek API key in the plugin settings.', 'aliyun-deepseek-chatbot');
+                if ($requires_app_id) {
+                    $message = __('Please configure the Aliyun DeepSeek API key and App ID in the plugin settings.', 'aliyun-deepseek-chatbot');
+                }
                 return '<div class="aliyun-chatbot-error">' . 
-                    __('Please configure the Aliyun DeepSeek API key in the plugin settings.', 'aliyun-deepseek-chatbot') . 
+                    $message . 
                     '</div>';
             } else {
                 return '';

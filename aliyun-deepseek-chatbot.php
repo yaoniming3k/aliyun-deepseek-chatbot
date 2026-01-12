@@ -103,8 +103,10 @@ function aliyun_deepseek_chatbot_activate() {
     update_option('aliyun_chatbot_version', ALIYUN_CHATBOT_VERSION);
 
     // Set default options (using add_option so existing values won't be overwritten)
-    add_option('aliyun_chatbot_allowed_api_hosts', 'dashscope.aliyuncs.com');
+    add_option('aliyun_chatbot_api_mode', 'model');
+    add_option('aliyun_chatbot_allowed_api_hosts', 'dashscope.aliyuncs.com, dashscope-intl.aliyuncs.com');
     add_option('aliyun_chatbot_api_endpoint', 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions');
+    add_option('aliyun_chatbot_workspace_id', '');
     add_option('aliyun_chatbot_enable_conversation', 1);
     add_option('aliyun_chatbot_show_thoughts', 0);
     add_option('aliyun_chatbot_history_length', 5);

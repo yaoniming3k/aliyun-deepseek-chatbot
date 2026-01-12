@@ -1,30 +1,37 @@
-# Aliyun DeepSeek AI ChatBot for WordPress
+# 阿里云百炼 AI 聊天机器人 | Aliyun Bailian ChatBot for WordPress
 
-一个强大的 WordPress 插件，为您的网站添加由阿里云 DeepSeek 驱动的 AI 聊天机器人。支持实时流式输出、推理过程显示、多轮对话等高级功能。
+一个强大的 WordPress 插件，为您的网站添加由阿里云百炼（Model Studio）驱动的 AI 聊天机器人。**支持双模式**：模型直接调用和应用构建调用。
 
-A powerful WordPress plugin that adds an AI chatbot powered by Aliyun DeepSeek to your website. Features real-time streaming output, reasoning process display, multi-turn conversations, and more.
+A powerful WordPress plugin that adds an AI chatbot powered by Aliyun Bailian (Model Studio) to your website. **Dual-mode support**: Direct model calling and Application API calling.
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
+![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)
 ![WordPress](https://img.shields.io/badge/WordPress-5.0+-green.svg)
 ![License](https://img.shields.io/badge/license-MIT-orange.svg)
+![Aliyun](https://img.shields.io/badge/Aliyun-Bailian-orange.svg)
 
-## Features | 功能特色
+## 🌟 Features | 功能特色
+
+### Dual API Modes | 双 API 模式 ⭐
+
+#### 模式 1: 模型直接调用 | Model API (Direct Calling)
+- **直接调用大模型** - 直接访问 Qwen、DeepSeek 等模型 | Direct access to Qwen, DeepSeek models
+- **完全参数控制** - 自定义温度、最大 Token、系统提示词 | Full control over temperature, max_tokens, system message
+- **适用场景** - 简单问答、客服对话 | Perfect for simple Q&A and customer service
+- **本地对话管理** - 插件管理对话历史 | Plugin manages conversation history locally
+
+#### 模式 2: 应用构建调用 | Application API (Agent/Workflow)
+- **调用百炼应用** - 调用在百炼控制台创建的智能体或工作流 | Call applications built in Bailian Console
+- **内置高级功能** - RAG 知识库、工具调用、MCP 集成 | Built-in RAG, tool calling, MCP integration
+- **云端对话管理** - 使用 session_id 由云端托管对话历史 | Cloud-managed conversation via session_id
+- **适用场景** - 复杂业务、知识库问答、多步骤任务 | Perfect for complex business, knowledge base, multi-step tasks
 
 ### Core Features | 核心功能
 - **Easy Integration | 简单集成** - Use shortcode `[aliyun_chatbot]` to add chatbot to any page | 使用短代码 `[aliyun_chatbot]` 将聊天机器人添加到任意页面
-- **OpenAI Compatible | OpenAI 兼容** - Uses Aliyun DeepSeek's OpenAI-compatible API | 使用阿里云 DeepSeek 的 OpenAI 兼容 API
 - **Real-time Streaming | 实时流式输出** - ChatGPT-like real-time response experience | 类 ChatGPT 的实时响应体验
 - **Multi-turn Conversations | 多轮对话** - Intelligent context memory for coherent dialogues | 智能上下文记忆，支持连贯对话
-- **Reasoning Display | 推理过程显示** - Optional display of AI's thinking process (for DeepSeek Reasoner) | 可选显示 AI 的思考过程（适用于 DeepSeek Reasoner）
-
-### Advanced Configuration | 高级配置
-- **Dual Model Support | 双模型支持** - Supports DeepSeek Chat and DeepSeek Reasoner (R1) | 支持 DeepSeek Chat 与 DeepSeek Reasoner (R1)
-- **Custom System Message | 自定义系统消息** - Define AI's behavior and role | 定义 AI 的行为与角色
-- **Temperature Control | 温度控制** - Adjust creativity and randomness of responses | 调整响应的随机性与创造性
-- **Token Limit | 令牌限制** - Control maximum response length | 控制最大响应长度
-- **Max Message Length | 消息长度限制** - Limit user message length | 限制用户消息长度
+- **Reasoning Display | 推理过程显示** - Optional display of AI's thinking process (DeepSeek R1) | 可选显示 AI 的思考过程（DeepSeek R1）
+- **Multiple Models | 多模型支持** - Qwen-Plus, Qwen-Max, DeepSeek-V3, DeepSeek-R1, Qwen-VL | 支持 Qwen-Plus、Qwen-Max、DeepSeek-V3、DeepSeek-R1、Qwen-VL
 - **Appearance Customization | 外观定制** - Customize chatbot width and height | 自定义聊天窗口宽高
-- **Conversation History | 对话历史** - Configurable conversation turn memory | 可配置的对话轮数记忆
 
 ## Requirements | 系统要求
 
@@ -57,23 +64,38 @@ OR
 
 ## Configuration | 配置
 
-1. Navigate to **Settings > AI ChatBot** in your WordPress admin dashboard
-2. Enter your Aliyun DashScope API Key
-3. Configure optional settings as needed:
-   - Enable/disable multi-turn conversations
-   - Show/hide AI thinking process
-   - Adjust conversation history length
-   - Set max message length
+### Quick Start | 快速开始
 
-## 配置
+1. Navigate to **Settings > AI ChatBot** in your WordPress admin dashboard
+2. Enter your **Aliyun DashScope API Key** ([Get API Key](https://bailian.console.aliyun.com/#/api-key))
+3. **Choose API Mode**:
+   - **Model API**: For simple Q&A (recommended for beginners)
+   - **Application API**: For advanced features (requires creating an app in [Bailian Console](https://bailian.console.aliyun.com/#/app-center))
+4. Configure model/application settings based on your mode
+5. Add `[aliyun_chatbot]` shortcode to any page
+
+### 快速开始
 
 1. 在 WordPress 后台进入 **设置 > AI ChatBot**
-2. 输入您的阿里云 DashScope API Key
-3. 按需配置可选项：
-   - 启用/禁用多轮对话
-   - 显示/隐藏 AI 思考过程
-   - 调整对话历史长度
-   - 设置消息最大长度
+2. 输入您的**阿里云 DashScope API Key** ([获取 API Key](https://bailian.console.aliyun.com/#/api-key))
+3. **选择 API 模式**：
+   - **模型 API**：用于简单问答（推荐新手）
+   - **应用 API**：用于高级功能（需要在[百炼控制台](https://bailian.console.aliyun.com/#/app-center)创建应用）
+4. 根据模式配置模型/应用设置
+5. 在任意页面添加 `[aliyun_chatbot]` 短代码
+
+### Mode-Specific Configuration | 模式专属配置
+
+#### Model API Mode | 模型 API 模式
+- **Model Selection** - Choose Qwen-Plus, Qwen-Max, or DeepSeek-V3 | 选择 Qwen-Plus、Qwen-Max 或 DeepSeek-V3
+- **System Message** - Define AI behavior and role | 定义 AI 行为和角色
+- **Temperature** - Control response randomness (0.0-2.0) | 控制响应随机性 (0.0-2.0)
+- **Max Tokens** - Limit response length | 限制响应长度
+
+#### Application API Mode | 应用 API 模式
+- **App ID** - Your application ID from Bailian Console | 百炼控制台的应用 ID ([How to get](https://help.aliyun.com/zh/model-studio/obtain-api-key-app-id-and-workspace-id))
+- **Workspace ID** - Optional, for sub-business spaces | 可选，用于子业务空间
+- Configuration is done in Bailian Console (system message, tools, RAG, etc.) | 在百炼控制台配置（系统提示词、工具、RAG 等）
 
 ## Usage | 使用方法
 
@@ -114,14 +136,46 @@ show_clear="yes"
 | `welcome_message` | Initial message from the chatbot / 欢迎语 | "Hello! How can I help you today?" |
 | `show_clear` | Show clear conversation button (yes/no) / 是否显示清空按钮 | "no" |
 
+## 🆚 Mode Comparison | 模式对比
+
+| Feature / 功能 | Model API<br>模型 API | Application API<br>应用 API |
+|---------------|----------------------|----------------------------|
+| **Setup Complexity<br>配置复杂度** | ⭐ Simple | ⭐⭐ Moderate (requires Bailian app) |
+| **Conversation Management<br>对话管理** | Local (WordPress)<br>本地（WordPress） | Cloud-managed (session_id)<br>云端托管（session_id） |
+| **RAG (Knowledge Base)<br>RAG（知识库）** | ❌ Not supported | ✅ Built-in support |
+| **Tool Calling<br>工具调用** | ❌ Not supported | ✅ Built-in support |
+| **MCP Integration<br>MCP 集成** | ❌ Not supported | ✅ Built-in support |
+| **System Message<br>系统提示词** | Configured in plugin<br>在插件中配置 | Configured in Bailian Console<br>在百炼控制台配置 |
+| **Model Selection<br>模型选择** | In plugin settings<br>插件设置 | In Bailian app config<br>百炼应用配置 |
+| **Best For<br>最适合** | Simple Q&A, customer service<br>简单问答、客服 | Complex business logic, knowledge base<br>复杂业务逻辑、知识库 |
+| **API Endpoint<br>API 端点** | `/compatible-mode/v1/chat/completions` | `/api/v1/apps/{app_id}/completion` |
+
+### Which Mode Should I Choose? | 应该选择哪种模式？
+
+✅ **Choose Model API if:** | **选择模型 API 如果：**
+- You want quick setup without creating apps | 希望快速设置，无需创建应用
+- Simple Q&A or customer service scenarios | 简单的问答或客服场景
+- Full control over model parameters | 完全控制模型参数
+- No need for RAG or tool calling | 不需要 RAG 或工具调用
+
+✅ **Choose Application API if:** | **选择应用 API 如果：**
+- You need RAG (knowledge base) functionality | 需要 RAG（知识库）功能
+- Complex workflows or multi-step tasks | 复杂工作流或多步骤任务
+- Integration with external tools/services | 需要与外部工具/服务集成
+- Want cloud-managed conversation history | 希望云端管理对话历史
+
 ## Configuration Options | 配置选项
 
 ### API Settings | API 设置
 
 | Option | Description | Default |
 |--------|-------------|---------|
+| API Mode | Model (OpenAI-compatible) or Agent (App) / API 模式 | model |
 | API Key | Aliyun DashScope API Key / 阿里云 DashScope API Key | - |
-| Allowed API Hosts | Allowed API hostnames (comma-separated) / 允许的 API 域名（逗号分隔） | dashscope.aliyuncs.com |
+| API Endpoint | Model API endpoint / 模型接口端点 | https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions |
+| App ID | Agent App ID / 智能体应用 ID | - |
+| Workspace ID | Agent Workspace ID / 业务空间 ID | - |
+| Allowed API Hosts | Allowed API hostnames (comma-separated) / 允许的 API 域名（逗号分隔） | dashscope.aliyuncs.com, dashscope-intl.aliyuncs.com |
 | Model | AI model selection / AI 模型选择 | deepseek-chat |
 | Temperature | Response randomness (0.0-2.0) / 响应随机性（0.0-2.0） | 1.0 |
 | Max Tokens | Maximum response tokens (100-8000) / 最大响应令牌数（100-8000） | 4000 |
@@ -148,10 +202,11 @@ show_clear="yes"
 
 ### API Endpoint | API 端点
 
-This plugin uses the OpenAI-compatible endpoint:
+This plugin supports both model and agent endpoints:
 
 ```
 https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions
+https://dashscope.aliyuncs.com/api/v1/apps/APP_ID/completion
 ```
 
 ### Example API Request | API 请求示例

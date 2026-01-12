@@ -111,7 +111,10 @@ class Aliyun_Chatbot_API_Handler {
      * @return array
      */
     private function get_allowed_api_hosts() {
-        $default_hosts = array('dashscope.aliyuncs.com');
+        $default_hosts = array(
+            'dashscope.aliyuncs.com',
+            'dashscope-intl.aliyuncs.com'
+        );
         $raw_hosts = get_option('aliyun_chatbot_allowed_api_hosts', '');
         $hosts = array();
 
@@ -185,6 +188,24 @@ class Aliyun_Chatbot_API_Handler {
         }
 
         return strlen($message);
+    }
+
+    /**
+     * Normalize thoughts content to a string.
+     *
+     * @param mixed $thoughts Thoughts content
+     * @return string
+     */
+    private function normalize_thoughts($thoughts) {
+        if (is_array($thoughts)) {
+            return wp_json_encode($thoughts);
+        }
+
+        if (is_null($thoughts)) {
+            return '';
+        }
+
+        return (string) $thoughts;
     }
     
     /**
@@ -284,11 +305,19 @@ class Aliyun_Chatbot_API_Handler {
             $this->send_error_response('Message is too long', $is_stream_request);
         }
 
+        $api_mode = get_option('aliyun_chatbot_api_mode', 'model');
+        if ($api_mode === 'agent') {
+            $this->handle_agent_request($message, $is_stream_request);
+            return;
+        }
+
         // Get API configuration
         $api_key = get_option('aliyun_chatbot_api_key', '');
         $model = get_option('aliyun_chatbot_model', 'deepseek-chat');
         $show_thoughts = get_option('aliyun_chatbot_show_thoughts', 0);
         $enable_stream = get_option('aliyun_chatbot_enable_stream', 0);
+        $enable_conversation = get_option('aliyun_chatbot_enable_conversation', 1);
+        $use_stream = $enable_stream && $is_stream_request;
 
         if (empty($api_key)) {
             $this->send_error_response('API key is required', $is_stream_request);
@@ -310,7 +339,7 @@ class Aliyun_Chatbot_API_Handler {
         $request_data = array(
             'model' => $model,
             'messages' => $messages,
-            'stream' => (bool) $enable_stream
+            'stream' => (bool) $use_stream
         );
 
         // Add temperature and other parameters
@@ -339,8 +368,8 @@ class Aliyun_Chatbot_API_Handler {
         }
 
         // If streaming is enabled, use SSE streaming
-        if ($enable_stream && $is_stream_request) {
-            $this->handle_streaming_request($api_endpoint, $api_key, $request_data, $messages);
+        if ($use_stream) {
+            $this->handle_streaming_request($api_endpoint, $api_key, $request_data, $messages, $enable_conversation, $show_thoughts);
             return;
         }
 
@@ -449,20 +478,335 @@ class Aliyun_Chatbot_API_Handler {
         }
 
         // Generate session ID if conversation is enabled
-        $session_id = $this->get_request_session_id();
-        if (empty($session_id)) {
-            $session_id = 'session_' . uniqid();
+        $session_id = '';
+        if ($enable_conversation) {
+            $session_id = $this->get_request_session_id();
+            if (empty($session_id)) {
+                $session_id = 'session_' . uniqid();
+            }
         }
         $response_data['session_id'] = $session_id;
 
         // Save conversation history
-        $messages[] = array(
-            'role' => 'assistant',
-            'content' => $response_data['message']
-        );
-        $this->save_conversation_messages($session_id, $messages);
+        if ($enable_conversation && !empty($session_id)) {
+            $messages[] = array(
+                'role' => 'assistant',
+                'content' => $response_data['message']
+            );
+            $this->save_conversation_messages($session_id, $messages);
+        }
 
         wp_send_json_success($response_data);
+    }
+
+    /**
+     * Handle agent application request.
+     *
+     * @param string $message User message
+     * @param bool $is_stream_request Whether request expects SSE
+     * @return void
+     */
+    private function handle_agent_request($message, $is_stream_request) {
+        $api_key = get_option('aliyun_chatbot_api_key', '');
+        $app_id = get_option('aliyun_chatbot_app_id', '');
+        $show_thoughts = get_option('aliyun_chatbot_show_thoughts', 0);
+        $enable_stream = get_option('aliyun_chatbot_enable_stream', 0);
+        $enable_conversation = get_option('aliyun_chatbot_enable_conversation', 1);
+        $workspace_id = get_option('aliyun_chatbot_workspace_id', '');
+        $use_stream = $enable_stream && $is_stream_request;
+
+        if (empty($api_key)) {
+            $this->send_error_response('API key is required', $is_stream_request);
+        }
+
+        if (empty($app_id)) {
+            $this->send_error_response('App ID is required for agent mode', $is_stream_request);
+        }
+
+        $session_id = $this->get_request_session_id();
+        if (!$enable_conversation) {
+            $session_id = '';
+        }
+        if ($enable_conversation && empty($session_id)) {
+            $session_id = 'session_' . uniqid();
+        }
+
+        $request_data = array(
+            'input' => array(
+                'prompt' => $message
+            ),
+            'parameters' => array(
+                'stream' => (bool) $use_stream
+            )
+        );
+
+        if (!empty($session_id)) {
+            $request_data['input']['session_id'] = $session_id;
+        }
+
+        if ($use_stream) {
+            $request_data['parameters']['incremental_output'] = true;
+        }
+
+        if ($show_thoughts) {
+            $request_data['parameters']['enable_thinking'] = true;
+            $request_data['parameters']['has_thoughts'] = true;
+        }
+
+        $api_endpoint = 'https://dashscope.aliyuncs.com/api/v1/apps/' . rawurlencode($app_id) . '/completion';
+        if (!$this->is_allowed_api_endpoint($api_endpoint)) {
+            $this->send_error_response('Invalid API endpoint host', $is_stream_request);
+        }
+
+        $headers = array(
+            'Content-Type' => 'application/json',
+            'Authorization' => 'Bearer ' . $api_key,
+        );
+
+        if (!empty($workspace_id)) {
+            $headers['X-DashScope-WorkSpace'] = $workspace_id;
+        }
+
+        if ($use_stream) {
+            $headers['X-DashScope-SSE'] = 'enable';
+            $headers['Accept'] = 'text/event-stream';
+            $this->handle_agent_streaming_request($api_endpoint, $headers, $request_data, $session_id, true, $enable_conversation, $show_thoughts);
+            return;
+        }
+
+        $response = wp_remote_post(
+            $api_endpoint,
+            array(
+                'headers' => $headers,
+                'body' => wp_json_encode($request_data),
+                'timeout' => 60,
+            )
+        );
+
+        if (is_wp_error($response)) {
+            $error_message = $response->get_error_message();
+            error_log('DeepSeek API error: ' . $error_message);
+            if (strpos($error_message, 'cURL error 28') !== false) {
+                $this->send_error_response('API connection timed out. Please check your network connection or try again later.', $is_stream_request);
+            } else if (strpos($error_message, 'cURL error 6') !== false) {
+                $this->send_error_response('Cannot resolve API hostname. Please check your API endpoint setting.', $is_stream_request);
+            } else {
+                $this->send_error_response('API request failed: ' . $error_message, $is_stream_request);
+            }
+            return;
+        }
+
+        $http_code = wp_remote_retrieve_response_code($response);
+        if ($http_code !== 200) {
+            $error_body = wp_remote_retrieve_body($response);
+            $error_data = json_decode($error_body, true);
+
+            $error_message = 'Request failed';
+            if ($http_code === 401) {
+                $error_message = 'Invalid API key. Please check your settings.';
+            } else if ($http_code === 404) {
+                $error_message = 'Endpoint not found. Please check your API endpoint setting.';
+            } else if ($http_code === 429) {
+                $error_message = 'API rate limit exceeded. Please try again later.';
+            } else if ($error_data && isset($error_data['message'])) {
+                $error_message = $error_data['message'];
+            } else if ($error_data && isset($error_data['error']['message'])) {
+                $error_message = $error_data['error']['message'];
+            }
+
+            error_log('DeepSeek API HTTP error: ' . $http_code . ' - ' . $error_message);
+            error_log('Error response: ' . $error_body);
+
+            $this->send_error_response($error_message, $is_stream_request);
+            return;
+        }
+
+        $body = wp_remote_retrieve_body($response);
+        $data = json_decode($body, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            $error_message = 'Invalid JSON response: ' . json_last_error_msg();
+            error_log('DeepSeek API JSON decode error: ' . json_last_error_msg());
+            $this->send_error_response($error_message, $is_stream_request);
+            return;
+        }
+
+        if (isset($data['status_code']) && intval($data['status_code']) !== 200) {
+            $error_message = isset($data['message']) ? $data['message'] : 'Request failed';
+            $this->send_error_response($error_message, $is_stream_request);
+            return;
+        }
+
+        $output = isset($data['output']) && is_array($data['output']) ? $data['output'] : array();
+
+        $response_data = array(
+            'message' => '',
+            'has_thoughts' => false,
+            'thoughts' => '',
+            'session_id' => $session_id
+        );
+
+        if (isset($output['text'])) {
+            $response_data['message'] = $output['text'];
+        }
+
+        $thoughts_value = null;
+        if (isset($output['thoughts'])) {
+            $thoughts_value = $output['thoughts'];
+        } else if (isset($output['thought'])) {
+            $thoughts_value = $output['thought'];
+        }
+
+        if ($show_thoughts && $thoughts_value !== null) {
+            $response_data['has_thoughts'] = true;
+            $response_data['thoughts'] = $this->normalize_thoughts($thoughts_value);
+        }
+
+        if ($enable_conversation && !empty($output['session_id'])) {
+            $response_data['session_id'] = $output['session_id'];
+        }
+
+        wp_send_json_success($response_data);
+    }
+
+    /**
+     * Handle agent application streaming request with SSE.
+     *
+     * @param string $endpoint API endpoint URL
+     * @param array $headers Request headers
+     * @param array $request_data Request data
+     * @param string $session_id Session ID
+     * @param bool $incremental_output Whether output is incremental
+     * @param bool $enable_conversation Whether to track session ID
+     * @param bool $show_thoughts Whether to include thought content
+     * @return void
+     */
+    private function handle_agent_streaming_request($endpoint, $headers, $request_data, $session_id, $incremental_output, $enable_conversation, $show_thoughts) {
+        header('Content-Type: text/event-stream');
+        header('Cache-Control: no-cache');
+        header('X-Accel-Buffering: no');
+
+        if (ob_get_level()) {
+            ob_end_clean();
+        }
+
+        $header_lines = array();
+        foreach ($headers as $key => $value) {
+            $header_lines[] = $key . ': ' . $value;
+        }
+
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $endpoint);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, wp_json_encode($request_data));
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, false);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $header_lines);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 120);
+
+        $buffer = '';
+        $full_content = '';
+        $full_reasoning = '';
+
+        curl_setopt($ch, CURLOPT_WRITEFUNCTION, function($curl, $data) use (&$buffer, &$full_content, &$full_reasoning, &$session_id, $incremental_output, $enable_conversation, $show_thoughts) {
+            $buffer .= $data;
+            $lines = explode("\n", $buffer);
+            $buffer = array_pop($lines);
+
+            foreach ($lines as $line) {
+                $line = trim($line);
+
+                if (empty($line) || strpos($line, ':') === 0) {
+                    continue;
+                }
+
+                if (strpos($line, 'data:') === 0) {
+                    $json_str = trim(substr($line, 5));
+                    if ($json_str === '[DONE]') {
+                        continue;
+                    }
+
+                    $chunk_data = json_decode($json_str, true);
+                    if (json_last_error() !== JSON_ERROR_NONE || !is_array($chunk_data)) {
+                        continue;
+                    }
+
+                    if (isset($chunk_data['status_code']) && intval($chunk_data['status_code']) !== 200) {
+                        $error_message = isset($chunk_data['message']) ? $chunk_data['message'] : 'Request failed';
+                        $error_data = array('error' => $error_message);
+                        echo "data: " . wp_json_encode($error_data) . "\n\n";
+                        flush();
+                        continue;
+                    }
+
+                    $output = isset($chunk_data['output']) && is_array($chunk_data['output']) ? $chunk_data['output'] : array();
+                    $event_data = array();
+
+                    if ($enable_conversation && isset($output['session_id']) && !empty($output['session_id'])) {
+                        $session_id = $output['session_id'];
+                    }
+
+                    if (isset($output['text'])) {
+                        $text = (string) $output['text'];
+                        if ($incremental_output) {
+                            $full_content .= $text;
+                        } else {
+                            $full_content = $text;
+                        }
+                        $event_data['text'] = $full_content;
+                    }
+
+                    $thoughts_value = null;
+                    if (isset($output['thoughts'])) {
+                        $thoughts_value = $output['thoughts'];
+                    } else if (isset($output['thought'])) {
+                        $thoughts_value = $output['thought'];
+                    }
+
+                    if ($show_thoughts && $thoughts_value !== null) {
+                        $thoughts = $this->normalize_thoughts($thoughts_value);
+                        if ($incremental_output) {
+                            $full_reasoning .= $thoughts;
+                        } else {
+                            $full_reasoning = $thoughts;
+                        }
+                        $event_data['thoughts'] = $full_reasoning;
+                    }
+
+                    if ($enable_conversation && !empty($session_id)) {
+                        $event_data['session_id'] = $session_id;
+                    }
+
+                    if (!empty($event_data)) {
+                        echo "data: " . wp_json_encode($event_data) . "\n\n";
+                        flush();
+                    }
+                }
+            }
+
+            return strlen($data);
+        });
+
+        curl_exec($ch);
+
+        $curl_error = curl_error($ch);
+        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+        curl_close($ch);
+
+        if (!empty($curl_error)) {
+            $error_data = array('error' => $curl_error);
+            echo "data: " . wp_json_encode($error_data) . "\n\n";
+            flush();
+        } elseif ($http_code !== 200) {
+            $error_data = array('error' => 'HTTP ' . $http_code);
+            echo "data: " . wp_json_encode($error_data) . "\n\n";
+            flush();
+        }
+
+        echo "data: [DONE]\n\n";
+        flush();
+
+        exit;
     }
 
     /**
@@ -472,9 +816,11 @@ class Aliyun_Chatbot_API_Handler {
      * @param string $api_key API key
      * @param array $request_data Request data
      * @param array $messages Conversation messages
+     * @param bool $enable_conversation Whether to track session ID
+     * @param bool $show_thoughts Whether to include thought content
      * @return void
      */
-    private function handle_streaming_request($endpoint, $api_key, $request_data, $messages) {
+    private function handle_streaming_request($endpoint, $api_key, $request_data, $messages, $enable_conversation, $show_thoughts) {
         // Set headers for SSE
         header('Content-Type: text/event-stream');
         header('Cache-Control: no-cache');
@@ -502,13 +848,15 @@ class Aliyun_Chatbot_API_Handler {
         $buffer = '';
         $full_content = '';
         $full_reasoning = '';
-        $session_id = $this->get_request_session_id();
-
-        if (empty($session_id)) {
-            $session_id = 'session_' . uniqid();
+        $session_id = '';
+        if ($enable_conversation) {
+            $session_id = $this->get_request_session_id();
+            if (empty($session_id)) {
+                $session_id = 'session_' . uniqid();
+            }
         }
 
-        curl_setopt($ch, CURLOPT_WRITEFUNCTION, function($curl, $data) use (&$buffer, &$full_content, &$full_reasoning, $session_id) {
+        curl_setopt($ch, CURLOPT_WRITEFUNCTION, function($curl, $data) use (&$buffer, &$full_content, &$full_reasoning, $session_id, $show_thoughts, $enable_conversation) {
             $buffer .= $data;
             $lines = explode("\n", $buffer);
 
@@ -547,13 +895,15 @@ class Aliyun_Chatbot_API_Handler {
                         }
 
                         // Extract incremental reasoning content
-                        if (isset($delta['reasoning_content'])) {
+                        if ($show_thoughts && isset($delta['reasoning_content'])) {
                             $full_reasoning .= $delta['reasoning_content'];
                             $event_data['thoughts'] = $full_reasoning;
                         }
 
                         // Add session ID
-                        $event_data['session_id'] = $session_id;
+                        if ($enable_conversation && !empty($session_id)) {
+                            $event_data['session_id'] = $session_id;
+                        }
 
                         // Send SSE event
                         if (!empty($event_data)) {
@@ -575,7 +925,7 @@ class Aliyun_Chatbot_API_Handler {
         curl_close($ch);
 
         // Save conversation history
-        if (!empty($full_content)) {
+        if ($enable_conversation && !empty($session_id) && !empty($full_content)) {
             $messages[] = array(
                 'role' => 'assistant',
                 'content' => $full_content
