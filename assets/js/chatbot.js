@@ -94,9 +94,13 @@ jQuery(document).ready(function($) {
 
             // Check if streaming is enabled
             var enableStream = aliyunChatbotData.enable_stream || false;
+            var canStream = enableStream &&
+                typeof window.fetch === 'function' &&
+                typeof window.TextDecoder !== 'undefined' &&
+                typeof window.ReadableStream !== 'undefined';
 
-            if (enableStream && typeof EventSource !== 'undefined') {
-                // Use SSE for streaming
+            if (canStream) {
+                // Use streaming response
                 sendStreamingMessage(message);
             } else {
                 // Use traditional AJAX
@@ -158,7 +162,7 @@ jQuery(document).ready(function($) {
             });
         }
 
-        // SSE streaming message sending
+        // Streaming message sending
         function sendStreamingMessage(message) {
             // Remove thinking indicator
             removeThinkingIndicator();
@@ -173,79 +177,120 @@ jQuery(document).ready(function($) {
             var streamMessage = container.find('#' + streamMessageId + ' .aliyun-chatbot-message-content');
             var fullText = '';
             var thoughtsShown = false;
+            var streamFinished = false;
+            var hasStreamData = false;
 
-            // Build the URL with parameters
-            var url = aliyunChatbotData.ajax_url + '?' + $.param({
+            var payload = $.param({
                 action: 'aliyun_chatbot_request',
                 nonce: aliyunChatbotData.nonce,
                 message: message,
                 session_id: sessionId
             });
 
-            // Create EventSource
-            var eventSource = new EventSource(url);
+            fetch(aliyunChatbotData.ajax_url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                    'Accept': 'text/event-stream'
+                },
+                body: payload,
+                credentials: 'same-origin'
+            })
+            .then(function(response) {
+                if (!response.ok || !response.body || typeof response.body.getReader !== 'function') {
+                    throw new Error('Streaming not supported');
+                }
 
-            eventSource.onmessage = function(event) {
-                if (event.data === '[DONE]') {
-                    eventSource.close();
+                var reader = response.body.getReader();
+                var decoder = new TextDecoder('utf-8');
+                var buffer = '';
 
-                    // Re-enable input
+                function finishStream() {
+                    if (streamFinished) {
+                        return;
+                    }
+                    streamFinished = true;
                     inputField.prop('disabled', false);
                     sendButton.prop('disabled', false);
                     inputField.focus();
-                    return;
                 }
 
-                try {
-                    var data = JSON.parse(event.data);
-
-                    // Handle errors
-                    if (data.error) {
-                        eventSource.close();
-                        streamMessage.html(formatMessage(aliyunChatbotData.error_text));
-
-                        // Re-enable input
-                        inputField.prop('disabled', false);
-                        sendButton.prop('disabled', false);
-                        console.error('Streaming error:', data.error);
+                function handleLine(line) {
+                    var trimmed = line.trim();
+                    if (!trimmed || trimmed.indexOf(':') === 0) {
                         return;
                     }
 
-                    // Update session ID
-                    if (data.session_id) {
-                        sessionId = data.session_id;
-                    }
+                    if (trimmed.indexOf('data:') === 0) {
+                        var jsonStr = trimmed.substring(5).trim();
+                        if (jsonStr === '[DONE]') {
+                            finishStream();
+                            return;
+                        }
 
-                    // Show thoughts if available
-                    if (data.thoughts && !thoughtsShown) {
-                        addThoughts(formatMessage(data.thoughts));
-                        thoughtsShown = true;
-                    }
+                        try {
+                            var data = JSON.parse(jsonStr);
 
-                    // Append text incrementally
-                    if (data.text) {
-                        fullText = data.text;
-                        streamMessage.html(formatMessage(fullText));
-                        messagesContainer.scrollTop(messagesContainer[0].scrollHeight);
+                            if (data.error) {
+                                streamMessage.html(formatMessage(aliyunChatbotData.error_text));
+                                console.error('Streaming error:', data.error);
+                                finishStream();
+                                reader.cancel();
+                                return;
+                            }
+
+                            if (data.session_id) {
+                                sessionId = data.session_id;
+                            }
+
+                            if (data.thoughts && !thoughtsShown) {
+                                addThoughts(formatMessage(data.thoughts));
+                                thoughtsShown = true;
+                                hasStreamData = true;
+                            }
+
+                            if (data.text) {
+                                fullText = data.text;
+                                streamMessage.html(formatMessage(fullText));
+                                messagesContainer.scrollTop(messagesContainer[0].scrollHeight);
+                                hasStreamData = true;
+                            }
+                        } catch (e) {
+                            console.error('Error parsing stream data:', e);
+                        }
                     }
-                } catch (e) {
-                    console.error('Error parsing SSE data:', e);
                 }
-            };
 
-            eventSource.onerror = function(error) {
-                eventSource.close();
-                console.error('SSE error:', error);
+                function read() {
+                    return reader.read().then(function(result) {
+                        if (result.done) {
+                            finishStream();
+                            return;
+                        }
 
-                // If no content was received, show error message
-                if (!fullText) {
-                    streamMessage.html(formatMessage(aliyunChatbotData.error_text));
+                        buffer += decoder.decode(result.value, { stream: true });
+                        var lines = buffer.split("\n");
+                        buffer = lines.pop();
+                        lines.forEach(handleLine);
+                        return read();
+                    });
                 }
 
-                // Re-enable input
+                return read();
+            })
+            .catch(function(error) {
+                console.error('Streaming error:', error);
+                if (!hasStreamData) {
+                    streamMessage.remove();
+                    addThinkingIndicator();
+                    sendTraditionalMessage(message);
+                    return;
+                }
+
+                streamMessage.html(formatMessage(aliyunChatbotData.error_text));
                 inputField.prop('disabled', false);
                 sendButton.prop('disabled', false);
-            };
+            });
         }
         
         // Function to clear the conversation

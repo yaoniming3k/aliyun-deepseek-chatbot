@@ -22,6 +22,7 @@ A powerful WordPress plugin that adds an AI chatbot powered by Aliyun DeepSeek t
 - **Custom System Message | 自定义系统消息** - Define AI's behavior and role | 定义 AI 的行为与角色
 - **Temperature Control | 温度控制** - Adjust creativity and randomness of responses | 调整响应的随机性与创造性
 - **Token Limit | 令牌限制** - Control maximum response length | 控制最大响应长度
+- **Max Message Length | 消息长度限制** - Limit user message length | 限制用户消息长度
 - **Appearance Customization | 外观定制** - Customize chatbot width and height | 自定义聊天窗口宽高
 - **Conversation History | 对话历史** - Configurable conversation turn memory | 可配置的对话轮数记忆
 
@@ -62,6 +63,7 @@ OR
    - Enable/disable multi-turn conversations
    - Show/hide AI thinking process
    - Adjust conversation history length
+   - Set max message length
 
 ## 配置
 
@@ -71,6 +73,7 @@ OR
    - 启用/禁用多轮对话
    - 显示/隐藏 AI 思考过程
    - 调整对话历史长度
+   - 设置消息最大长度
 
 ## Usage | 使用方法
 
@@ -118,6 +121,7 @@ show_clear="yes"
 | Option | Description | Default |
 |--------|-------------|---------|
 | API Key | Aliyun DashScope API Key / 阿里云 DashScope API Key | - |
+| Allowed API Hosts | Allowed API hostnames (comma-separated) / 允许的 API 域名（逗号分隔） | dashscope.aliyuncs.com |
 | Model | AI model selection / AI 模型选择 | deepseek-chat |
 | Temperature | Response randomness (0.0-2.0) / 响应随机性（0.0-2.0） | 1.0 |
 | Max Tokens | Maximum response tokens (100-8000) / 最大响应令牌数（100-8000） | 4000 |
@@ -130,6 +134,7 @@ show_clear="yes"
 | Multi-turn Conversation | Enable multi-turn conversations / 启用多轮对话 | On |
 | Show Thinking Process | Display reasoning process / 显示推理过程 | Off |
 | Conversation History Length | Conversation history turns (1-20) / 对话历史轮数（1-20） | 5 |
+| Max Message Length | Maximum message length in characters (200-20000) / 消息最大字符长度（200-20000） | 4000 |
 | Enable Streaming Output | Enable real-time streaming / 启用实时流式输出 | Off |
 
 ### Appearance Settings | 外观设置

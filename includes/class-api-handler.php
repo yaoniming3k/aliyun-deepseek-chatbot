@@ -67,6 +67,125 @@ class Aliyun_Chatbot_API_Handler {
 
         wp_send_json_error($message);
     }
+
+    /**
+     * Get a sanitized session ID from the request.
+     *
+     * @return string
+     */
+    private function get_request_session_id() {
+        $session_id = isset($_REQUEST['session_id']) ? wp_unslash($_REQUEST['session_id']) : '';
+        $session_id = sanitize_text_field($session_id);
+        $session_id = preg_replace('/[^A-Za-z0-9_-]/', '', $session_id);
+
+        if (strlen($session_id) > 64) {
+            $session_id = substr($session_id, 0, 64);
+        }
+
+        return $session_id;
+    }
+
+    /**
+     * Normalize a hostname value.
+     *
+     * @param string $host Host input
+     * @return string
+     */
+    private function normalize_host($host) {
+        $host = trim($host);
+        if ($host === '') {
+            return '';
+        }
+
+        $host = preg_replace('#^https?://#i', '', $host);
+        $host = preg_replace('#/.*$#', '', $host);
+        $host = strtolower($host);
+        $host = preg_replace('/[^a-z0-9.-]/', '', $host);
+
+        return $host;
+    }
+
+    /**
+     * Get allowed API hosts.
+     *
+     * @return array
+     */
+    private function get_allowed_api_hosts() {
+        $default_hosts = array('dashscope.aliyuncs.com');
+        $raw_hosts = get_option('aliyun_chatbot_allowed_api_hosts', '');
+        $hosts = array();
+
+        if (!empty($raw_hosts)) {
+            $parts = preg_split('/\s*,\s*/', $raw_hosts);
+            foreach ($parts as $part) {
+                $host = $this->normalize_host($part);
+                if ($host !== '') {
+                    $hosts[] = $host;
+                }
+            }
+        }
+
+        $hosts = array_merge($default_hosts, $hosts);
+        $hosts = array_unique($hosts);
+
+        $hosts = apply_filters('aliyun_chatbot_allowed_api_hosts', $hosts);
+        if (!is_array($hosts)) {
+            $hosts = $default_hosts;
+        }
+
+        $normalized = array();
+        foreach ($hosts as $host) {
+            $host = $this->normalize_host($host);
+            if ($host !== '') {
+                $normalized[] = $host;
+            }
+        }
+
+        return array_values(array_unique($normalized));
+    }
+
+    /**
+     * Check if the API endpoint is allowed.
+     *
+     * @param string $endpoint API endpoint
+     * @return bool
+     */
+    private function is_allowed_api_endpoint($endpoint) {
+        $endpoint = trim($endpoint);
+        if (empty($endpoint)) {
+            return false;
+        }
+
+        $parts = wp_parse_url($endpoint);
+        if (empty($parts['scheme']) || empty($parts['host'])) {
+            return false;
+        }
+
+        $scheme = strtolower($parts['scheme']);
+        $host = strtolower($parts['host']);
+
+        if ($scheme !== 'https') {
+            return false;
+        }
+
+        $allowed_hosts = $this->get_allowed_api_hosts();
+
+        return in_array($host, $allowed_hosts, true);
+    }
+
+    /**
+     * Get message length using a multibyte-safe function when available.
+     *
+     * @param string $message Message content
+     * @return int
+     */
+    private function get_message_length($message) {
+        if (function_exists('mb_strlen')) {
+            return mb_strlen($message);
+        }
+
+        return strlen($message);
+    }
     
     /**
      * Get conversation messages array
@@ -76,7 +195,7 @@ class Aliyun_Chatbot_API_Handler {
      */
     private function get_conversation_messages($new_message) {
         $messages = array();
-        $session_id = isset($_REQUEST['session_id']) ? sanitize_text_field(wp_unslash($_REQUEST['session_id'])) : '';
+        $session_id = $this->get_request_session_id();
         $enable_conversation = get_option('aliyun_chatbot_enable_conversation', 1);
 
         // Load conversation history from transient
@@ -156,6 +275,15 @@ class Aliyun_Chatbot_API_Handler {
             $this->send_error_response('Message is required', $is_stream_request);
         }
 
+        $max_message_length = absint(get_option('aliyun_chatbot_max_message_length', 4000));
+        $max_message_length = absint(apply_filters('aliyun_chatbot_max_message_length', $max_message_length));
+        if ($max_message_length < 1) {
+            $max_message_length = 4000;
+        }
+        if ($this->get_message_length($message) > $max_message_length) {
+            $this->send_error_response('Message is too long', $is_stream_request);
+        }
+
         // Get API configuration
         $api_key = get_option('aliyun_chatbot_api_key', '');
         $model = get_option('aliyun_chatbot_model', 'deepseek-chat');
@@ -170,6 +298,9 @@ class Aliyun_Chatbot_API_Handler {
         $api_endpoint = get_option('aliyun_chatbot_api_endpoint', '');
         if (empty($api_endpoint)) {
             $api_endpoint = 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions';
+        }
+        if (!$this->is_allowed_api_endpoint($api_endpoint)) {
+            $this->send_error_response('Invalid API endpoint host', $is_stream_request);
         }
 
         // Build messages array for conversation
@@ -318,7 +449,7 @@ class Aliyun_Chatbot_API_Handler {
         }
 
         // Generate session ID if conversation is enabled
-        $session_id = isset($_REQUEST['session_id']) ? sanitize_text_field(wp_unslash($_REQUEST['session_id'])) : '';
+        $session_id = $this->get_request_session_id();
         if (empty($session_id)) {
             $session_id = 'session_' . uniqid();
         }
@@ -371,7 +502,7 @@ class Aliyun_Chatbot_API_Handler {
         $buffer = '';
         $full_content = '';
         $full_reasoning = '';
-        $session_id = isset($_REQUEST['session_id']) ? sanitize_text_field(wp_unslash($_REQUEST['session_id'])) : '';
+        $session_id = $this->get_request_session_id();
 
         if (empty($session_id)) {
             $session_id = 'session_' . uniqid();

@@ -120,7 +120,32 @@ class Aliyun_Chatbot_Admin {
             'aliyun_chatbot_api_endpoint', 
             array('sanitize_callback' => 'esc_url_raw')
         );
-        
+
+        register_setting(
+            'aliyun_deepseek_settings',
+            'aliyun_chatbot_allowed_api_hosts',
+            array(
+                'sanitize_callback' => function($value) {
+                    $value = sanitize_text_field($value);
+                    $parts = preg_split('/\s*,\s*/', $value);
+                    $hosts = array();
+
+                    foreach ($parts as $part) {
+                        $part = preg_replace('#^https?://#i', '', $part);
+                        $part = preg_replace('#/.*$#', '', $part);
+                        $part = strtolower($part);
+                        $part = preg_replace('/[^a-z0-9.-]/', '', $part);
+                        if ($part !== '') {
+                            $hosts[] = $part;
+                        }
+                    }
+
+                    $hosts = array_unique($hosts);
+                    return implode(',', $hosts);
+                }
+            )
+        );
+
         register_setting(
             'aliyun_deepseek_settings', 
             'aliyun_chatbot_app_id', 
@@ -154,6 +179,17 @@ class Aliyun_Chatbot_Admin {
             'aliyun_deepseek_settings',
             'aliyun_chatbot_enable_stream',
             array('sanitize_callback' => 'intval')
+        );
+
+        register_setting(
+            'aliyun_deepseek_settings',
+            'aliyun_chatbot_max_message_length',
+            array(
+                'sanitize_callback' => function($value) {
+                    $value = intval($value);
+                    return max(200, min(20000, $value));
+                }
+            )
         );
 
         register_setting(
@@ -299,6 +335,14 @@ class Aliyun_Chatbot_Admin {
             'aliyun-deepseek-chatbot',
             'aliyun_deepseek_api_section'
         );
+
+        add_settings_field(
+            'aliyun_chatbot_allowed_api_hosts',
+            __('Allowed API Hosts', 'aliyun-deepseek-chatbot'),
+            array($this, 'render_allowed_api_hosts_field'),
+            'aliyun-deepseek-chatbot',
+            'aliyun_deepseek_api_section'
+        );
         
         add_settings_field(
             'aliyun_chatbot_app_id',
@@ -373,6 +417,14 @@ class Aliyun_Chatbot_Admin {
         );
 
         add_settings_field(
+            'aliyun_chatbot_max_message_length',
+            __('Max Message Length', 'aliyun-deepseek-chatbot'),
+            array($this, 'render_max_message_length_field'),
+            'aliyun-deepseek-chatbot',
+            'aliyun_deepseek_features_section'
+        );
+
+        add_settings_field(
             'aliyun_chatbot_enable_stream',
             __('Enable Streaming Output', 'aliyun-deepseek-chatbot'),
             array($this, 'render_enable_stream_field'),
@@ -417,7 +469,7 @@ class Aliyun_Chatbot_Admin {
      * Render features section description
      */
     public function render_features_section() {
-        echo '<p>' . __('Configure additional features for the chatbot.', 'aliyun-deepseek-chatbot') . '</p>';
+        echo '<p>' . __('Configure additional features for the chatbot, including conversation history, streaming, and message length limits.', 'aliyun-deepseek-chatbot') . '</p>';
     }
 
     /**
@@ -446,6 +498,17 @@ class Aliyun_Chatbot_Admin {
         ?>
         <input type="text" id="aliyun_chatbot_api_endpoint" name="aliyun_chatbot_api_endpoint" value="<?php echo esc_attr($api_endpoint); ?>" class="regular-text">
         <p class="description"><?php _e('The Aliyun DeepSeek API endpoint (default: https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions)', 'aliyun-deepseek-chatbot'); ?></p>
+        <?php
+    }
+
+    /**
+     * Render allowed API hosts field
+     */
+    public function render_allowed_api_hosts_field() {
+        $allowed_hosts = get_option('aliyun_chatbot_allowed_api_hosts', 'dashscope.aliyuncs.com');
+        ?>
+        <input type="text" id="aliyun_chatbot_allowed_api_hosts" name="aliyun_chatbot_allowed_api_hosts" value="<?php echo esc_attr($allowed_hosts); ?>" class="regular-text">
+        <p class="description"><?php _e('Comma-separated list of allowed API hosts. Default: dashscope.aliyuncs.com', 'aliyun-deepseek-chatbot'); ?></p>
         <?php
     }
 
@@ -501,6 +564,17 @@ class Aliyun_Chatbot_Admin {
         ?>
         <input type="number" id="aliyun_chatbot_history_length" name="aliyun_chatbot_history_length" value="<?php echo esc_attr($history_length); ?>" class="small-text" min="1" max="20">
         <p class="description"><?php _e('Number of conversation turns to remember (1-20). Higher values provide more context but may slow down responses.', 'aliyun-deepseek-chatbot'); ?></p>
+        <?php
+    }
+
+    /**
+     * Render max message length field
+     */
+    public function render_max_message_length_field() {
+        $max_message_length = get_option('aliyun_chatbot_max_message_length', 4000);
+        ?>
+        <input type="number" id="aliyun_chatbot_max_message_length" name="aliyun_chatbot_max_message_length" value="<?php echo esc_attr($max_message_length); ?>" class="small-text" min="200" max="20000" step="100">
+        <p class="description"><?php _e('Maximum message length in characters (200-20000). Default: 4000', 'aliyun-deepseek-chatbot'); ?></p>
         <?php
     }
 
